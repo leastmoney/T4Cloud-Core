@@ -1,0 +1,61 @@
+#set($d="$")
+# 基础镜像：t4-base，Ubuntu:20.04,JDK:1.8.0_201,TimeZone:Shanghai,字体补充:中文字体
+FROM t4cloud/t4-base-ubuntu:1.1
+MAINTAINER TeaR
+<zqr.it@t4cloud.com>
+
+# 挂载日志目录
+VOLUME ["/TeaR-APP/logs", "/TeaR-APP/code/conf"]
+# 将jar包copy到镜像中的根目录
+COPY target/${artifactId}.jar /TeaR-APP/code/${artifactId}.jar
+
+# 配置JVM参数
+ENV JAVA_OPTS="\
+-server \
+-XX:MetaspaceSize=256m \
+-XX:MaxMetaspaceSize=256m \
+-Xms512m \
+-Xmx512m \
+-Xmn128m \
+-Xss256k \
+-XX:SurvivorRatio=8 \
+-XX:+UseConcMarkSweepGC"
+
+# ENV JAVA_OPTS="\
+# -server \
+# -Xmx4g \
+# -Xms4g \
+# -Xmn1536m \
+# -XX:SurvivorRatio=1 \
+# -XX:MetaspaceSize=256m \
+# -XX:MaxMetaspaceSize=256m \
+# -XX:ParallelGCThreads=4 \
+# -XX:+PrintGCDetails \
+# -XX:+PrintTenuringDistribution \
+# -XX:+PrintGCTimeStamps \
+# -XX:+HeapDumpOnOutOfMemoryError \
+# -XX:HeapDumpPath=/ \
+# -Xloggc:/logs/gc.log \
+# -XX:+UseGCLogFileRotation \
+# -XX:NumberOfGCLogFiles=5 \
+# -XX:+DisableExplicitGC \
+# -XX:+UseConcMarkSweepGC \
+# -XX:+UseParNewGC \
+# -XX:+CMSParallelRemarkEnabled \
+# -XX:+CMSClassUnloadingEnabled \
+# -XX:LargePageSizeInBytes=128M \
+# -XX:+UseFastAccessorMethods \
+# -XX:+UseCMSInitiatingOccupancyOnly \
+# -XX:CMSInitiatingOccupancyFraction=80 \
+# -XX:SoftRefLRUPolicyMSPerMB=0 \
+# -XX:+PrintClassHistogram \
+# -XX:+PrintHeapAtGC \
+# -XX:+UnlockDiagnosticVMOptions \
+# -XX:+UnlockExperimentalVMOptions \
+# -XX:+PrintFlagsFinal\
+# -XX:GCLogFileSize=10M"
+
+# 对外暴露的端口
+EXPOSE $serverPort
+# 运行启动脚本
+ENTRYPOINT java ${d}{JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom -jar -Dspring.config.location=/TeaR-APP/code/conf/ /TeaR-APP/code/T4Cloud-App.jar

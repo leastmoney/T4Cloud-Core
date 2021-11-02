@@ -1,0 +1,93 @@
+package templates;
+
+
+import $!{package.Entity}.$!{entity};
+import $!{superServiceClassPackage};
+#if($!{cfg.tree})
+import java.util.LinkedList;
+import java.util.List;
+#end
+
+/**
+ * #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end  服务类
+ *
+ * <p>
+ * --------------------
+ *
+ * @author $!{author}
+ * @since $!{date} $!{time}
+ */
+#if($!{kotlin})
+interface $!{table.serviceName} : $!{superServiceClass}<$!{entity}>
+#else
+public interface $!{table.serviceName} extends $!{superServiceClass}<$!{entity}> {
+
+#if($!{cfg.tree})
+
+    /**
+     * 获取所有一级元素
+     *
+     * @param metaData 全集
+     *                 <p>
+     * @return java.util.List<$!{entity}>
+     * --------------------
+     * @author TeaR
+     * @date 2020/12/18 15:49
+     */
+    List<$!{entity}> findLevelZero(List<$!{entity}> metaData);
+
+    /**
+     * 将列表转换为树状结构
+     *
+     * @param list     树状结构一级节点
+     * @param metaData 原权限列表
+     *                 <p>
+     * @return void
+     * --------------------
+     * @author TeaR
+     * @date 2020/2/13 14:33
+    */
+    void tree(List<$!{entity}> list, List<$!{entity}> metaData);
+
+    /**
+     * 获取指定层数的上级路径
+     *
+     * @param entity 当前节点
+     * @param depth  最大深度
+     * @param result 最终路径
+     *               <p>
+     * @return void
+     * --------------------
+     * @author TeaR
+     * @date 2021/8/4 3:25 下午
+     */
+    void parent($!{entity} entity, int depth, LinkedList<$!{entity}> result);
+
+    /**
+     * 获取指定层数的子节点
+     *
+     * @param list     父节点
+     * @param depth    最大深度
+     *                 <p>
+     * @return void
+     * --------------------
+     * @author TeaR
+     * @date 2021/8/2 19:57
+     */
+    void children(List<$!{entity}> list, int depth);
+
+    /**
+     * 获取子集的ID(从数据库中查找所有的子集ID)
+     *
+     * @param ids 树状结构一级节点 id 列表
+     * @param all 所最后的结果集
+     *            <p>
+     * @return void
+     * --------------------
+     * @author TeaR
+     * @date 2020/2/13 14:33
+     */
+     void children(List<String> ids, List<String> all);
+#end
+}
+#end

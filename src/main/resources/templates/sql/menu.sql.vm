@@ -1,0 +1,24 @@
+INSERT INTO `sys_permission`(`id`, `parent_id`, `name`, `url`, `open_type`, `component`, `menu_type`, `perms`, `sort_no`, `icon`, `description`, `hidden`, `status`, `create_by`, `create_time`)
+VALUES ('$!{cfg.menuId}', NULL, '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end', '/$!{cfg.moduleName}/$!{entity}', '0', '$!{cfg.moduleName}/$!{entity}List', '0', '', '10', NULL, '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end -菜单', '1', '1', '1', now());
+INSERT INTO `sys_permission`(`id`, `parent_id`, `name`, `menu_type`, `perms`, `sort_no`, `icon`, `description`, `hidden`, `status`, `create_by`, `create_time`)
+VALUES ('$!{cfg.addMenuId}', '$!{cfg.menuId}', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end _新增', '2', '$!{cfg.moduleName}:$!{entity}:ADD', '11', 'el-icon-circle-plus-outline', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end -新增按钮', 1, 1, '1', now());
+INSERT INTO `sys_permission`(`id`, `parent_id`, `name`, `menu_type`, `perms`, `sort_no`, `icon`, `description`, `hidden`, `status`, `create_by`, `create_time`)
+VALUES ('$!{cfg.editMenuId}', '$!{cfg.menuId}', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end _修改', '2', '$!{cfg.moduleName}:$!{entity}:EDIT', '12', 'el-icon-edit', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end -编辑按钮', 1, 1, '1', now());
+INSERT INTO `sys_permission`(`id`, `parent_id`, `name`, `menu_type`, `perms`, `sort_no`, `icon`, `description`, `hidden`, `status`, `create_by`, `create_time`)
+VALUES ('$!{cfg.removeMenuId}', '$!{cfg.menuId}', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end _删除', '2', '$!{cfg.moduleName}:$!{entity}:DELETE', '13', 'el-icon-delete', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end -删除按钮', 1, 1, '1', now());
+INSERT INTO `sys_permission`(`id`, `parent_id`, `name`, `menu_type`, `perms`, `sort_no`, `icon`, `description`, `hidden`, `status`, `create_by`, `create_time`)
+VALUES ('$!{cfg.viewMenuId}', '$!{cfg.menuId}', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end _查看', '2', '$!{cfg.moduleName}:$!{entity}:VIEW', '14', 'el-icon-view', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end -详情按钮', 1, 1, '1', now());
+INSERT INTO `sys_permission`(`id`, `parent_id`, `name`, `menu_type`, `perms`, `sort_no`, `icon`, `description`, `hidden`, `status`, `create_by`, `create_time`)
+VALUES ('$!{cfg.exportMenuId}', '$!{cfg.menuId}', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end _导出', '2', '$!{cfg.moduleName}:$!{entity}:EXPORT', '15', 'el-icon-download', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end -导出按钮', 1, 1, '1', now());
+INSERT INTO `sys_permission`(`id`, `parent_id`, `name`, `menu_type`, `perms`, `sort_no`, `icon`, `description`, `hidden`, `status`, `create_by`, `create_time`)
+VALUES ('$!{cfg.importMenuId}', '$!{cfg.menuId}', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end _导入', '2', '$!{cfg.moduleName}:$!{entity}:IMPORT', '16', 'el-icon-upload2', '#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}管理#end -导入按钮', 1, 1, '1', now());
+
+## 给 SUPER-ADMIN 角色添加这些权限
+INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_by`, `create_time`) VALUES ('$!{cfg.roleMenuId}', '1', '$!{cfg.menuId}', '1', now());
+INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_by`, `create_time`) VALUES ('$!{cfg.roleAddMenuId}', '1',  '$!{cfg.addMenuId}', '1', now());
+INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_by`, `create_time`) VALUES ('$!{cfg.roleEditMenuId}', '1',  '$!{cfg.editMenuId}', '1', now());
+INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_by`, `create_time`) VALUES ('$!{cfg.roleRemoveMenuId}', '1',  '$!{cfg.removeMenuId}', '1', now());
+INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_by`, `create_time`) VALUES ('$!{cfg.roleViewMenuId}', '1',  '$!{cfg.viewMenuId}', '1', now());
+INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_by`, `create_time`) VALUES ('$!{cfg.roleExportMenuId}', '1',  '$!{cfg.exportMenuId}', '1', now());
+INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_by`, `create_time`) VALUES ('$!{cfg.roleImportMenuId}', '1',  '$!{cfg.importMenuId}', '1', now());
+

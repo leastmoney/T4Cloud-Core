@@ -1,0 +1,184 @@
+package $!{package.ServiceImpl};
+
+import $!{package.Entity}.$!{entity};
+import $!{package.Mapper}.$!{table.mapperName};
+import $!{package.Service}.$!{table.serviceName};
+import $!{superServiceImplClassPackage};
+
+import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
+import lombok.AllArgsConstructor;
+
+#if($!{cfg.tree})
+import java.util.List;
+import java.util.LinkedList;
+import java.util.stream.Collectors;
+
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+
+import com.t4cloud.t.base.entity.TreeEntity;
+import com.t4cloud.t.base.exception.T4CloudServiceException;
+#end
+
+/**
+ * #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end  服务实现类
+ *
+ * <p>
+ * --------------------
+ *
+ * @author $!{author}
+ * @since $!{date} $!{time}
+ */
+@Slf4j
+@Service
+@AllArgsConstructor
+#if($!{kotlin})
+open class $!{table.serviceImplName} : $!{superServiceImplClass}<$!{table.mapperName}, $!{entity}>(), $!{table.serviceName} {
+
+}
+#else
+public class $!{table.serviceImplName} extends $!{superServiceImplClass}<$!{table.mapperName}, $!{entity}> implements $!{table.serviceName} {
+
+#if($!{cfg.tree})
+
+        /**
+         * 获取所有一级元素
+         *
+         * @param metaData 全集
+         *                 <p>
+         * @return java.util.List<$!{entity}>
+         * --------------------
+         * @author TeaR
+         * @date 2020/12/18 15:49
+         */
+        @Override
+        public List<$!{entity}> findLevelZero(List<$!{entity}> metaData) {
+            //获取ID合集，判断当前集合中是否存在父ID，若不存在则为独立根节点（直接判断父ID容易丢失 伪1级节点）
+            List<String> finalMetaIdList = metaData.stream().map(TreeEntity::getId).collect(Collectors.toList());
+            return metaData.stream().filter(item -> !finalMetaIdList.contains(item.getParentId())).collect(Collectors.toList());
+        }
+
+        /**
+         * 将列表转换为树状结构
+         *
+         * @param list     树状结构一级节点
+         * @param metaData 原权限列表
+         *                 <p>
+         * @return void
+         * --------------------
+         * @author TeaR
+         * @date 2020/2/13 14:33
+         */
+        @Override
+        public void tree(List<$!{entity}> list, List<$!{entity}> metaData) {
+            for ($!{entity} entity : list) {
+                List<$!{entity}> treeList = metaData.stream().filter(item -> entity.getId().equalsIgnoreCase(item.getParentId())).collect(Collectors.toList());
+                if (CollUtil.isEmpty(treeList)) {
+                    entity.setHasChild(false);
+                    continue;
+                }
+                tree(treeList, metaData);
+                entity.setChildren(treeList).setHasChild(true);
+            }
+        }
+
+        /**
+         * 获取指定层数的上级路径
+         *
+         * @param entity 当前节点
+         * @param depth  最大深度
+         * @param result 最终路径
+         *               <p>
+         * @return void
+         * --------------------
+         * @author TeaR
+         * @date 2021/8/4 3:25 下午
+         */
+        @Override
+        public void parent($!{entity} entity, int depth, LinkedList<$!{entity}> result) {
+            //准备自身信息
+            if (StrUtil.isBlank(entity.getParentId())) {
+                entity = getById(entity.getId());
+            }
+            //递归终点
+            if (depth == 0 || StrUtil.isBlank(entity.getParentId())) {
+                return;
+            }
+            //获取父节点
+            $!{entity} parent = getById(entity.getParentId());
+            result.addFirst(parent);
+            //是否继续递归
+            if (parent != null) {
+                parent(parent, depth - 1, result);
+            }
+        }
+
+        /**
+         * 获取指定层数的子节点
+         *
+         * @param list  父节点
+         * @param depth 最大深度
+         *              <p>
+         * @return void
+         * --------------------
+         * @author TeaR
+         * @date 2021/8/2 19:57
+         */
+        @Override
+        public void children(List<$!{entity}> list, int depth) {
+            //验证参数
+            if (CollUtil.isEmpty(list)) {
+                throw new T4CloudServiceException("父节点不允许为空！");
+            }
+            //地柜终点
+            if (depth <= 0) {
+                list.forEach(item -> item.setHasChild(true));
+                return;
+            }
+            //查询所有子节点
+            List<$!{entity}> childrenAll = lambdaQuery().in(TreeEntity::getParentId, list.stream().map(TreeEntity::getId).collect(Collectors.toList())).list();
+            if (CollUtil.isEmpty(childrenAll)) {
+                list.forEach(item -> item.setHasChild(false));
+                return;
+            }
+            //遍历填充子节点
+            for ($!{entity} entity : list) {
+                List<$!{entity}> children = childrenAll.stream().filter(item -> item.getParentId().equalsIgnoreCase(entity.getId())).collect(Collectors.toList());
+                if (CollUtil.isEmpty(children)) {
+                    entity.setHasChild(false);
+                    continue;
+                }
+                children(children, depth - 1);
+                entity.setChildren(children).setHasChild(true);
+            }
+        }
+
+        /**
+         * 获取子集的ID(从数据库中查找所有的子集ID)
+         *
+         * @param ids 树状结构一级节点 id 列表
+         * @param all 所最后的结果集
+         *            <p>
+         * @return void
+         * --------------------
+         * @author TeaR
+         * @date 2020/2/13 14:33
+         */
+        @Override
+        public void children(List<String> ids, List<String> all) {
+            //查询所有子节点
+            List<String> children = lambdaQuery().in(TreeEntity::getParentId, ids).list().stream().map(TreeEntity::getId).collect(Collectors.toList());
+            //无子节点，结束
+            if (CollUtil.isEmpty(children)) {
+                return;
+            }
+            //存在子节点，继续往下寻找
+            children(children, all);
+            //添加入原列表中
+            all.addAll(children);
+        }
+#end
+
+}
+#end

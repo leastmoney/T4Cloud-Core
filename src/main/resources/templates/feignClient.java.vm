@@ -1,0 +1,75 @@
+package templates;
+
+import com.t4cloud.t.base.entity.dto.R;
+import com.t4cloud.t.feign.dto.$!{entity}DTO;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.cloud.openfeign.SpringQueryMap;
+import org.springframework.web.bind.annotation.*;
+#if(!$!{cfg.tree})
+import com.baomidou.mybatisplus.core.metadata.IPage;
+#end
+
+import java.util.List;
+
+/**
+ * #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end  Feign Client
+ * <p>
+ * ---------------------
+ *
+ * @author $!{author}
+ * @since $!{date} $!{time}
+ */
+@FeignClient(name = "$!{cfg.serverName}", contextId = "$!{table.entityPath}", path = "#if($!{package.ModuleName} && !$!{cfg.cloud})/$!{package.ModuleName}#end/$!{entity}")
+public interface $!{cfg.classNamePrefix}$!{entity}Client {
+
+    /**
+     * 详情 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+     */
+    @GetMapping(value = "/detail")
+    R<$!{entity}DTO> detail(@SpringQueryMap $!{entity}DTO $!{table.entityPath}DTO);
+
+#if($!{cfg.tree})
+    /**
+     * 树状列表查询  #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+     */
+    @GetMapping(value = "/tree/{pid}")
+    R<List<$!{entity}DTO>> tree(@PathVariable("pid") String pid, @RequestParam("depth") Integer depth, @SpringQueryMap $!{entity}DTO $!{table.entityPath}DTO);
+
+    /**
+     * 父级路径查询  #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+     */
+    @GetMapping("/parent/{id}")
+    R<List<$!{entity}DTO>> parent(@PathVariable("id") String id, @RequestParam("depth") Integer depth);
+#else
+    /**
+     * 全部列表 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+     */
+    @GetMapping(value = "/list")
+    R<List<$!{entity}DTO>> list(@SpringQueryMap $!{entity}DTO $!{table.entityPath}DTO);
+
+    /**
+     * 分页查询 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+     */
+    @GetMapping(value = "/page")
+    R<IPage<$!{entity}DTO>> page(@SpringQueryMap $!{entity}DTO $!{table.entityPath}DTO, @RequestParam("pageNo") Integer pageNo, @RequestParam("pageSize") Integer pageSize,
+#end
+
+    /**
+     * 新增 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+     */
+    @PutMapping(value = "/save")
+    R<Boolean> save(@RequestBody $!{entity}DTO $!{table.entityPath});
+
+    /**
+     * 修改 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+     */
+    @PostMapping(value = "/update")
+    R<Boolean> update(@RequestBody $!{entity}DTO $!{table.entityPath});
+
+    /**
+     * 删除 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+     */
+    @DeleteMapping(value = "/delete")
+    R<Boolean> delete(@RequestParam("ids") String ids);
+
+}

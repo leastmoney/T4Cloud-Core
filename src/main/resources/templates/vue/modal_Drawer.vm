@@ -1,0 +1,92 @@
+<template>
+    <div class="fixedDialog">
+        <el-drawer :visible.sync="isShow" direction="rtl" :size="device=='mobile'?'100%':'550px'" :before-close="close" :append-to-body="true">
+            <div slot="title">
+                <h2 class="el-drawer__title">{{title}}</h2>
+            </div>
+            <div class="dialog__body">
+                <el-form :model="forms" :rules="rules" class="dialogForm" ref="baseForm" label-width="100px" v-loading="loading">
+#foreach($field in $!{table.fields})
+                    <el-form-item label="$!{field.comment}" prop="$!{field.propertyName}">
+#if($!{field.propertyName.equals("parentId")})
+                        <t-tree-select ref="treeSelect" :options="treeList" v-model="forms.parentId" :disabled="disableSubmit"></t-tree-select>
+#elseif($!{field.type.equalsIgnoreCase("date")})
+                        <el-date-picker placeholder="选择$!{field.comment}" v-model="forms.$!{field.propertyName}" :readonly="disableSubmit" format="yyyy-MM-dd"
+                            value-format="yyyy-MM-dd"></el-date-picker>
+#elseif($!{field.type.equalsIgnoreCase("datetime")} || $!{field.type.equalsIgnoreCase("timestamp")})
+                        <el-date-picker type="datetime" placeholder="选择$!{field.comment}" v-model="forms.$!{field.propertyName}" :readonly="disableSubmit"
+                            format="yyyy-MM-dd HH:mm:ss" value-format="yyyy-MM-dd HH:mm:ss"></el-date-picker>
+#elseif($!{field.type.equalsIgnoreCase("time")})
+                        <el-time-picker placeholder="选择$!{field.comment}" v-model="forms.$!{field.propertyName}" :readonly="disableSubmit" value-format="HH:mm:ss"></el-time-picker>
+#elseif($!{field.propertyType.equalsIgnoreCase("int")} || $!{field.propertyType.equalsIgnoreCase("Integer")} || $!{field.propertyType.equalsIgnoreCase("double")} || $!{field.propertyType.equalsIgnoreCase("float")} || $!{field.propertyType.equalsIgnoreCase("BigDecimal")})
+                        <el-input-number placeholder="输入$!{field.comment}" v-model="forms.$!{field.propertyName}" :disabled="disableSubmit">
+                        </el-input-number>
+#elseif($!{field.type.contains("text")})
+                        <el-input placeholder="输入$!{field.comment}" v-model="forms.$!{field.propertyName}" type="textarea" :rows="2" :readonly="disableSubmit">
+                        </el-input>
+#else
+                        <el-input placeholder="输入$!{field.comment}" v-model="forms.$!{field.propertyName}" :readonly="disableSubmit"></el-input>
+#end
+                    </el-form-item>
+#end
+                </el-form>
+            </div>
+            <div class="dialog__footer">
+                <el-button @click="close">取消</el-button>
+                <el-button type="primary" @click="submitForm('baseForm')" :disabled="disableSubmit">确定</el-button>
+            </div>
+        </el-drawer>
+    </div>
+</template>
+<script>
+import { T4CloudModalMixin } from '@/mixins/T4CloudModalMixin'
+#set($d="$")
+export default {
+  name: '$!{entity}Modal',
+  mixins: [T4CloudModalMixin],
+  data() {
+      return {
+          rules: {
+#foreach($field in $!{table.fields})
+#if("$!field.customMap.NULL" == "NO")
+              $field.propertyName: { required: true, message: '$!{field.comment}不允许为空', trigger: 'blur' },
+#end
+#end
+          },
+          url: {
+              detail: '/$!{cfg.serverName}#if($!{package.ModuleName} && !$!{cfg.cloud})/$!{package.ModuleName}#end/$!{entity}/detail',
+              save: '/$!{cfg.serverName}#if($!{package.ModuleName} && !$!{cfg.cloud})/$!{package.ModuleName}#end/$!{entity}/save',
+              update: '/$!{cfg.serverName}#if($!{package.ModuleName} && !$!{cfg.cloud})/$!{package.ModuleName}#end/$!{entity}/update',
+          },
+      }
+  },
+#if($!{cfg.tree})
+  props: {
+      tableData: {
+          type: Array,
+          default: () => { return [] }
+      }
+  },
+  watch: {
+      tableData: {
+          handler(newValue) {
+              let arr = JSON.parse(JSON.stringify(newValue))
+              this.treeList = arr
+          },
+          deep: true
+      }
+  },
+#end
+  methods: {
+      //此处可填充默认值
+      initForm() {
+          return {
+              id: null,
+          #foreach($field in $!{table.fields})
+              $field.propertyName: null, // $!{field.comment}
+          #end
+          }
+      },
+  }
+}
+</script>

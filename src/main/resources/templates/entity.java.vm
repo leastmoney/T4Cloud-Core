@@ -1,0 +1,210 @@
+package templates;
+
+#foreach($pkg in $!{table.importPackages})
+import $!{pkg};
+#end
+import cn.afterturn.easypoi.excel.annotation.Excel;
+#if($!{entityLombokModel})
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+#end
+import org.springframework.format.annotation.DateTimeFormat;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import javax.validation.constraints.NotNull;
+#if($!{activeRecord})
+import lombok.experimental.Accessors;
+#end
+#if($!{entityLombokModel})
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+#end
+#if($!{swagger2})
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+#end
+#if($!{cfg.tree})
+import com.t4cloud.t.base.entity.TreeEntity;
+#end
+
+/**
+ * #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end  实体类
+ *
+ * <p>
+ * --------------------
+ *
+ * @author $!{author}
+ * @since $!{date} $!{time}
+ */
+#if($!{entityLombokModel})
+@Data
+#end
+#if($!{table.convert})
+@TableName("$!{table.name}")
+#end
+#if($!{superEntityClass})
+@EqualsAndHashCode(callSuper = true)
+#end
+#if($!{activeRecord})
+@Accessors(chain = true)
+#end
+#if($!{entityLombokModel})
+@NoArgsConstructor
+@AllArgsConstructor
+#end
+#if($!{swagger2})
+@ApiModel(value = "$!{entity}对象", description = #if ("$!{table.comment}"=="")"$!{entity}对象"#else"$!{table.comment}"#end)
+#end
+#if($!{cfg.tree})
+public class $!{entity} extends TreeEntity<$!{entity}> {
+#elseif($!{superEntityClass})
+public class $!{entity} extends $!{superEntityClass}<$!{entity}> {
+#else
+public class $!{entity} implements Serializable{
+#end
+
+private static final long serialVersionUID=1L;
+
+## ----------  BEGIN 字段循环遍历  ----------
+
+#set($index = -1)
+#foreach($field in $!{table.fields})
+	#set($index = $index + 1)
+#if($!{field.name}!=$!{cfg.tenantColumn})
+#if($!{field.keyFlag})
+#set($keyPropertyName=$!{field.propertyName})
+#end
+#if("$!field.comment" != "")
+	## EXCEL单元格宽度计算
+	#set($width = $field.comment.length() * 2.5)
+	## EXCEL单元格类型判断，主要是判断1-文本，10-文字
+	#if($!{field.propertyType.equalsIgnoreCase("int")} || $!{field.propertyType.equalsIgnoreCase("Integer")} || $!{field.propertyType.equalsIgnoreCase("double")} || $!{field.propertyType.equalsIgnoreCase("float")} || $!{field.propertyType.equalsIgnoreCase("BigDecimal")})
+		#set($excelType = ' type = 10,')
+	#end
+
+	/**
+	 * $!{field.comment}
+	 */
+	#if($!{field.propertyType.equalsIgnoreCase("date")} || $!{field.propertyType.equalsIgnoreCase("datetime")} || $!{field.propertyType.equalsIgnoreCase("localdatetime")})
+		#if($!{field.type.equalsIgnoreCase("date")})
+			#set($datePattern='"yyyy-MM-dd"')
+		#elseif($!{field.type.equalsIgnoreCase("time")})
+			#set($datePattern='"HH:mm:ss"')
+		#else
+			#set($datePattern='"yyyy-MM-dd HH:mm:ss"')
+		#end
+	@JsonFormat(timezone = "GMT+8", pattern = $!{datePattern})
+	@DateTimeFormat(pattern = $!{datePattern})
+	@Excel(name = "$!{field.comment}",$!{excelType} width = $!{width}, orderNum = "$!{index}", format = $!{datePattern})
+	#else
+	@Excel(name = "$!{field.comment}",$!{excelType} width = $!{width}, orderNum = "$!{index}")
+	#end
+	#if($!{swagger2})
+	@ApiModelProperty(value = "$!{field.comment}")
+	#end
+#end
+#if($!{field.keyFlag})
+## 主键
+#if($!{field.keyIdentityFlag})
+	@TableId(value = "$!{field.name}", type = IdType.AUTO)
+#elseif(!$null.isNull($!{idType}) && "$!idType" != "")
+	@TableId(value = "$!{field.name}", type = IdType.$!{idType})
+#elseif($!{field.convert})
+	@TableId("$!{field.name}")
+#end
+## 普通字段
+#elseif($!{field.fill})
+## -----   存在字段填充设置   -----
+#if($!{field.propertyType.equals("date")} || $!{field.propertyType.equals("datetime")} || $!{field.propertyType.equalsIgnoreCase("LocalDateTime")})
+	@JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
+	@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+#end
+#if($!{field.convert})
+	@TableField(value = "$!{field.name}", fill = FieldFill.$!{field.fill})
+#else
+	@TableField(fill = FieldFill.$!{field.fill})
+#end
+#elseif($!{field.convert})
+	@TableField("$!{field.name}")
+#end
+## 乐观锁注解
+#if($!{versionFieldName}==$!{field.name})
+	@Version
+#end
+## 逻辑删除注解
+#if($!{logicDeleteFieldName}==$!{field.name})
+	@TableLogic
+#end
+##自动校验非空
+#if("$!field.customMap.NULL" == "NO")
+	@NotNull(message = "$!{field.comment}不允许为空")
+#end
+	private $!{field.propertyType} $!{field.propertyName};
+
+#end
+#end
+## ----------  END 字段循环遍历  ----------
+
+	// ----------------------------------------------- Constructor -----------------------------------------------
+
+	public $!{entity}(String id) {
+		this.id = id;
+	}
+
+#if(!$!{entityLombokModel})
+#foreach($field in $!{table.fields})
+#if($!{field.propertyType.equals("boolean")})
+#set($getprefix="is")
+#else
+#set($getprefix="get")
+#end
+
+	public $!{field.propertyType} $!{getprefix}$!{field.capitalName}() {
+		return $!{field.propertyName};
+	}
+
+#if($!{entityBuilderModel})
+	public $!{entity} set$!{field.capitalName}($!{field.propertyType} $!{field.propertyName}) {
+#else
+	public void set$!{field.capitalName}($!{field.propertyType} $!{field.propertyName}) {
+#end
+		this.$!{field.propertyName} = $!{field.propertyName};
+#if($!{entityBuilderModel})
+		return this;
+#end
+	}
+#end
+#end
+
+#if($!{entityColumnConstant})
+#foreach($field in $!{table.fields})
+	public static final String $!{field.name.toUpperCase()} = "$!{field.name}";
+
+#end
+#end
+##暂时不需要重写
+###if($!{activeRecord})
+##	@Override
+##	protected Serializable pkVal() {
+###if($!{keyPropertyName})
+##		return this.$!{keyPropertyName};
+###else
+##		return this.id;
+###end
+##	}
+##
+###end
+#if(!$!{entityLombokModel})
+	@Override
+	public String toString() {
+		return "$!{entity}{" +
+#foreach($field in $!{table.fields})
+#if($!{velocityCount}==1)
+		"$!{field.propertyName}=" + $!{field.propertyName} +
+#else
+		", $!{field.propertyName}=" + $!{field.propertyName} +
+#end
+#end
+		"}";
+	}
+#end
+}

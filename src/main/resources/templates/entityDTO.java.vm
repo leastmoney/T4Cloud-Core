@@ -1,0 +1,93 @@
+package templates;
+
+#if($!{entityLombokModel})
+import lombok.Data;
+#end
+import org.springframework.format.annotation.DateTimeFormat;
+import com.fasterxml.jackson.annotation.JsonFormat;
+#if($!{activeRecord})
+import lombok.experimental.Accessors;
+#end
+#if($!{entityLombokModel})
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+#end
+#if($!{swagger2})
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+#end
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+#if($!{cfg.tree})
+import com.t4cloud.t.base.entity.TreeDtoEntity;
+#else
+import com.t4cloud.t.base.entity.BaseDtoEntity;
+#end
+
+/**
+ * #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end  DTO类
+ *
+ * <p>
+ * --------------------
+ *
+ * @author $!{author}
+ * @since $!{date} $!{time}
+ */
+#if($!{entityLombokModel})
+@Data
+#end
+#if($!{activeRecord})
+@Accessors(chain = true)
+#end
+#if($!{entityLombokModel})
+@NoArgsConstructor
+@AllArgsConstructor
+#end
+@JsonIgnoreProperties(ignoreUnknown = true)
+#if($!{swagger2})
+@ApiModel(value = "$!{entity}DTO对象", description = #if ("$!{table.comment}"=="")"$!{entity}DTO对象"#else"$!{table.comment}"#end)
+#end
+#if($!{cfg.tree})
+public class $!{entity}DTO extends TreeDtoEntity<$!{entity}DTO> {
+#else
+public class $!{entity}DTO  extends BaseDtoEntity<$!{entity}DTO> {
+#end
+
+	private static final long serialVersionUID = 1L;
+
+## ----------  BEGIN 字段循环遍历  ----------
+
+#foreach($field in $!{table.fields})
+#if($!{field.name}!=$!{cfg.tenantColumn})
+#if("$!field.comment" != "")
+	/**
+	* $!{field.comment}
+	 */
+	#if($!{swagger2})
+	@ApiModelProperty(value = "$!{field.comment}")
+	#end
+#end
+## 普通字段
+## -----   存在字段填充设置   -----
+#if($!{field.propertyType.equalsIgnoreCase("date")} || $!{field.propertyType.equalsIgnoreCase("datetime")} || $!{field.propertyType.equalsIgnoreCase("LocalDateTime")})
+	#if($!{field.type.equalsIgnoreCase("date")})
+		#set($datePattern='"yyyy-MM-dd"')
+	#elseif($!{field.type.equalsIgnoreCase("time")})
+		#set($datePattern='"HH:mm:ss"')
+	#else
+		#set($datePattern='"yyyy-MM-dd HH:mm:ss"')
+	#end
+	@JsonFormat(timezone = "GMT+8", pattern = $!{datePattern})
+	@DateTimeFormat(pattern = $!{datePattern})
+#end
+	private $!{field.propertyType} $!{field.propertyName};
+#end
+#end
+## ----------  END 字段循环遍历  ----------
+
+	// ----------------------------------------------- Constructor -----------------------------------------------
+
+	public $!{entity}DTO(String id) {
+		this.id = id;
+	}
+
+}

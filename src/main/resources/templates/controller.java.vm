@@ -1,0 +1,266 @@
+package templates;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import lombok.AllArgsConstructor;
+
+import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+#if(!$!{cfg.tree})
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+#end
+
+
+import com.t4cloud.t.base.annotation.AutoLog;
+import com.t4cloud.t.base.entity.dto.R;
+import com.t4cloud.t.base.export.poi.EasyPoiUtil;
+import com.t4cloud.t.base.query.T4Query;
+
+#if($!{superEntityClass})
+import org.springframework.web.bind.annotation.RequestParam;
+#end
+#if($!{cfg.tree})
+import com.t4cloud.t.base.entity.TreeEntity;
+import java.util.LinkedList;
+#end
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.authz.annotation.Logical;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
+import java.util.Arrays;
+import java.util.List;
+
+
+
+import $!{package.Entity}.$!{entity};
+import $!{package.Service}.$!{table.serviceName};
+#if($!{superControllerClassPackage})
+import $!{superControllerClassPackage};
+#end
+#if(!$!{superEntityClass})
+#end
+
+/**
+ * #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end 控制器
+ *
+ * <p>
+ * --------------------
+ *
+ * @author $!{author}
+ * @since $!{date} $!{time}
+ */
+@RestController
+@AllArgsConstructor
+@Slf4j
+@Api(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end", tags = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end 接口", position = 10)
+@RequestMapping("#if($!{package.ModuleName} && !$!{cfg.cloud})/$!{package.ModuleName}#end/$!{entity}")
+#if($!{superControllerClass})
+public class $!{table.controllerName} extends $!{superControllerClass}<$!{entity}, $!{table.serviceName}> {
+#else
+public class $!{table.controllerName} {
+#end
+
+	/**
+	 * 详情
+	 */
+    @AutoLog(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -详情")
+	@GetMapping("/detail")
+	@RequiresPermissions("$!{cfg.moduleName}:$!{entity}:VIEW")
+	@ApiOperation(position = 1, value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -详情", notes = "传入$!{table.entityPath}")
+	public R<$!{entity}> detail($!{entity} $!{table.entityPath}, HttpServletRequest req) {
+		QueryWrapper<$!{entity}> $!{table.entityPath}QueryWrapper = T4Query.initQuery($!{table.entityPath}, req.getParameterMap());
+		$!{entity} detail = service.getOne($!{table.entityPath}QueryWrapper);
+		return R.ok("$!{table.comment}-详情查询成功", detail);
+	}
+
+#if($!{cfg.tree})
+	/**
+	* 树状列表查询  #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+	*/
+	@AutoLog(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -树状列表查询")
+	@GetMapping({"/tree" , "/tree/{pid}"})
+	@RequiresPermissions("$!{cfg.moduleName}:$!{entity}:VIEW")
+	@ApiOperation(position = 2, value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -树状列表查询", notes = "传入$!{table.entityPath}")
+	public R<List<$!{entity}>> tree(
+			@ApiParam(value = "指定父ID,仅获取该ID下的子项，可传入多个", required = false) @PathVariable(name = "pid" , required = false) String pid,
+			@ApiParam(value = "深度", required = false) @RequestParam(name = "depth", required = false, defaultValue = "-1") Integer depth,
+			$!{entity} $!{table.entityPath}, HttpServletRequest req) {
+		//常规获取全量数据
+		if (depth == -1) {
+			//获取数据
+			QueryWrapper<$!{entity}> $!{table.entityPath}QueryWrapper = T4Query.initQuery($!{table.entityPath}, req.getParameterMap());
+			List<$!{entity}> metaList = service.list($!{table.entityPath}QueryWrapper);
+			//获取根目录
+			List<$!{entity}> treeList = StrUtil.isBlank(pid) ? service.findLevelZero(metaList) : metaList.stream().filter(item -> Arrays.asList(StrUtil.split(pid, ",")).contains(item.getId())).collect(Collectors.toList());
+			//校验根目录
+			if (treeList == null || treeList.size() == 0) {
+				return R.notFound("找不到对应数据");
+			}
+			//整理树状结构
+			service.tree(treeList, metaList);
+			return R.ok("#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -全部列表（树状列表）查询成功", treeList);
+		} else {
+			//按指定层数获取，但丢失查询条件
+			//先查询第一层
+			List<$!{entity}> treeList = service.lambdaQuery()
+					.in(StrUtil.isNotBlank(pid), TreeEntity::getId, Arrays.asList(StrUtil.split(pid, ",")))
+					.eq(StrUtil.isBlank(pid), $!{entity}::getParentId, StrUtil.EMPTY)
+					.orderByDesc(TreeEntity::getCreateTime).list();
+			//校验根目录
+			if (treeList == null || treeList.size() == 0) {
+				return R.notFound("找不到对应数据");
+			}
+			//获取指定层数子节点
+			service.children(treeList, depth);
+			return R.ok("#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -全部列表（树状列表）查询成功", treeList);
+		}
+	}
+
+	/**
+	* 父级路径查询  #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+	*/
+	@AutoLog(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -父级路径查询")
+	@GetMapping("/parent/{id}")
+	@RequiresPermissions("$!{cfg.moduleName}:$!{entity}:VIEW")
+	@ApiOperation(position = 3, value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -父级路径查询", notes = "传入指定ID和指定深度，深度可不传")
+	public R<List<$!{entity}>> parent(
+			@ApiParam(value = "指定ID") @PathVariable(name = "id") String id,
+			@ApiParam(value = "深度", required = false) @RequestParam(name = "depth", required = false, defaultValue = "-1") Integer depth) {
+		//验证自身
+		$!{entity} $!{table.entityPath} = service.getById(id);
+		if ($!{table.entityPath} == null) {
+			return R.notFound("找不到指定对象！");
+		}
+		//获取父级
+		LinkedList<$!{entity}> result = new LinkedList<>();
+		result.add($!{table.entityPath});
+		service.parent($!{table.entityPath}, depth, result);
+		return R.ok("#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -父级路径查找完成。", result);
+	}
+#else
+	/**
+	 * 全部列表 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+	 */
+	@AutoLog(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -全部列表")
+	@GetMapping("/list")
+	@RequiresPermissions("$!{cfg.moduleName}:$!{entity}:VIEW")
+	@ApiOperation(position = 2, value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -全部列表", notes = "传入$!{table.entityPath}")
+	public R<List<$!{entity}>> list($!{entity} $!{table.entityPath}, HttpServletRequest req) {
+		QueryWrapper<$!{entity}> $!{table.entityPath}QueryWrapper = T4Query.initQuery($!{table.entityPath}, req.getParameterMap());
+		List<$!{entity}> list = service.list($!{table.entityPath}QueryWrapper);
+		return R.ok("#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -全部列表查询成功", list);
+	}
+
+
+	/**
+	 * 分页查询 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+	 */
+	@AutoLog(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -分页查询")
+	@GetMapping("/page")
+	@RequiresPermissions("$!{cfg.moduleName}:$!{entity}:VIEW")
+	@ApiOperation(position = 3, value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -分页查询", notes = "传入$!{table.entityPath}")
+	public R<IPage<$!{entity}>> page($!{entity} $!{table.entityPath},
+									@ApiParam(name = "pageNo")
+									@RequestParam(name = "pageNo", required = false, defaultValue = "1") Integer pageNo,
+									@ApiParam(name = "pageSize")
+									@RequestParam(name = "pageSize", required = false, defaultValue = "10") Integer pageSize,
+											HttpServletRequest req) {
+			QueryWrapper<$!{entity}> $!{table.entityPath}QueryWrapper = T4Query.initQuery($!{table.entityPath}, req.getParameterMap());
+			IPage<$!{entity}> pages = service.page(new Page<>(pageNo, pageSize), $!{table.entityPath}QueryWrapper);
+			return R.ok("#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -分页查询查询成功", pages);
+	}
+#end
+
+	/**
+	 * 新增 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+	 */
+    @AutoLog(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -新增", operateType = 1)
+	@PutMapping("/save")
+	@RequiresPermissions("$!{cfg.moduleName}:$!{entity}:ADD")
+	@ApiOperation(position = 4, value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -新增", notes = "传入$!{table.entityPath}")
+	public R<Boolean> save(@Valid @RequestBody $!{entity} $!{table.entityPath}, BindingResult bindingResult) {
+		return R.ok("#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -新增成功", service.save($!{table.entityPath}));
+	}
+
+	/**
+	 * 修改 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+	 */
+    @AutoLog(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -修改", operateType = 3)
+    @PostMapping("/update")
+	@RequiresPermissions(value = {"$!{cfg.moduleName}:$!{entity}:ADD","$!{cfg.moduleName}:$!{entity}:EDIT"}, logical = Logical.OR)
+	@ApiOperation(position = 5, value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -修改", notes = "传入$!{table.entityPath}")
+	public R<Boolean> update(@RequestBody $!{entity} $!{table.entityPath}) {
+		return R.ok("#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -修改成功", service.updateById($!{table.entityPath}));
+	}
+
+	#if($!{deleteLogic})
+
+	/**
+	 * 删除 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+	 */
+    @AutoLog(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -逻辑删除", operateType = 2)
+	@DeleteMapping("/delete")
+	@RequiresPermissions("$!{cfg.moduleName}:$!{entity}:DELETE")
+	@ApiOperation(position = 7, value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -逻辑删除", notes = "传入ids")
+	public R<Boolean> delete(@ApiParam(value = "主键集合", required = true) @RequestParam(name = "ids") String ids) {
+		return R.ok("#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -逻辑删除成功"， service.deleteLogic(Arrays.asList(ids.split(","))));
+	}
+
+	#else
+
+	/**
+	 * 删除 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+	 */
+    @AutoLog(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -删除", operateType = 2)
+	@DeleteMapping("/delete")
+	@RequiresPermissions("$!{cfg.moduleName}:$!{entity}:DELETE")
+	@ApiOperation(position = 8, value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -删除", notes = "传入ids")
+	public R<Boolean> delete(@ApiParam(value = "主键集合", required = true) @RequestParam(name = "ids") String ids) {
+		#if($!{cfg.tree})
+		List<String> idList = Arrays.asList(ids.split(","));
+		List<String> all = new ArrayList<>(idList);
+		service.children(idList, all);
+		return R.ok("#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -删除成功(含子节点)", service.removeByIds(all));
+		#else
+		return R.ok("#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -删除成功", service.removeByIds(Arrays.asList(ids.split(","))));
+		#end
+
+	}
+
+	#end
+
+	/**
+	 * 导出 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+	 */
+	@AutoLog(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -导出")
+	@GetMapping("/export")
+	@RequiresPermissions("$!{cfg.moduleName}:$!{entity}:EXPORT")
+	@ApiOperation(position = 9, value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -导出", notes = "传入查询条件，选中的ID（多个用,分割），以及自定义的列（多个用,分割）")
+	public void export($!{entity} $!{table.entityPath},
+					   @ApiParam("导出类型") @RequestParam(name = "type", required = false, defaultValue = "excel") String type,
+					   @ApiParam("选中导出的数据") @RequestParam(name = "selectedRowKeys", required = false) String selectedRowKeys,
+					   @ApiParam("自定义导出列") @RequestParam(name = "selectedColKeys", required = false) String selectedColKeys,
+		               HttpServletRequest req) {
+		QueryWrapper<$!{entity}> queryWrapper = StrUtil.isEmpty(selectedRowKeys) ? T4Query.initQuery($!{table.entityPath}, req.getParameterMap()) : new QueryWrapper<$!{entity}>().in("id", selectedRowKeys.split(","));
+		super.export(type, "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end ", selectedColKeys, queryWrapper);
+	}
+
+	/**
+	 * 导入 #if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end
+	 */
+	@AutoLog(value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -导入", operateType = 1)
+	@PutMapping("/import")
+	@RequiresPermissions("$!{cfg.moduleName}:$!{entity}:IMPORT")
+	@ApiOperation(position = 10, value = "#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -导入", notes = "传入填好的模板文件即可")
+	public R<Boolean> importXls(@ApiParam("EXCEL文件") MultipartFile file) {
+		return R.ok("#if("$!{table.comment}" != '')$!{table.comment}#else $!{entity}对象#end -导入成功", service.saveBatch(EasyPoiUtil.importExcel(file, $!{entity}.class)));
+	}
+
+}

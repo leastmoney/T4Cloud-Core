@@ -1,0 +1,221 @@
+server:
+  port: 17777
+  tomcat:
+    max-swallow-size: -1
+    mbeanregistry:
+      enabled: true
+  servlet:
+    compression:
+      enabled: true
+      mime-types: application/javascript,application/json,application/xml,text/html,text/xml,text/plain,text/css,image/*
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  aop:
+    proxy-target-class: true
+  application:
+    name: T4Cloud-Core
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos.t4cloud.com:18848
+        # 环境隔离
+        group:   TEST
+        # 项目隔离
+        namespace: 715134fc-68ef-465d-a728-b72c2b05981f
+  #redis 配置
+  redis:
+    database: 7
+    host: t4cloud.com
+    lettuce:
+      pool:
+        max-active: 8   #最大连接数据库连接数,设 0 为没有限制
+        max-idle: 8     #最大等待连接中的数量,设 0 为没有限制
+        max-wait: -1ms  #最大建立连接等待时间。如果超过此时间将接到异常。设为-1表示无限制。
+        min-idle: 0     #最小等待连接中的数量,设 0 为没有限制
+      shutdown-timeout: 100ms
+    password: ''
+    port: 16378
+  autoconfigure:
+    exclude: com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure
+  #数据库 配置
+  datasource:
+    druid:
+      stat-view-servlet:
+        enabled: true
+        loginUsername: t4cloud
+        loginPassword: 123456
+        allow:
+      web-stat-filter:
+        enabled: true
+    dynamic:
+      druid: # 全局druid参数，绝大部分值和默认保持一致。(现已支持的参数如下,不清楚含义不要乱设置)
+        # 连接池的配置信息
+        # 初始化大小，最小，最大
+        initial-size: 5
+        min-idle: 5
+        maxActive: 20
+        # 配置获取连接等待超时的时间
+        maxWait: 60000
+        # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒
+        timeBetweenEvictionRunsMillis: 60000
+        # 配置一个连接在池中最小生存的时间，单位是毫秒
+        minEvictableIdleTimeMillis: 300000
+        validationQuery: SELECT 1 FROM DUAL
+        testWhileIdle: true
+        testOnBorrow: false
+        testOnReturn: false
+        # 打开PSCache，并且指定每个连接上PSCache的大小
+        poolPreparedStatements: true
+        maxPoolPreparedStatementPerConnectionSize: 20
+        # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+        filters: stat,wall,slf4j
+        # 通过connectProperties属性来打开mergeSql功能；慢SQL记录
+        connectionProperties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
+      datasource:
+        master:
+          url: jdbc:mysql://gz-cdb-9pis4q35.sql.tencentcdb.com:62520/t4-cloud?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=GMT%2B8&zeroDateTimeBehavior=convertToNull
+          username: t4cloud
+          password: t4cloud@123
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          # 多数据源配置
+          #multi-datasource1:
+          #url: jdbc:mysql://localhost:3306/t4-boot?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true
+          #username: root
+          #password: root
+          #driver-class-name: com.mysql.jdbc.Driver
+
+#运行环境监控端点开放
+management:
+  endpoints:
+    web:
+      exposure:
+        include: metrics,httptrace,env
+
+#mybatis plus 设置
+mybatis-plus:
+  mapper-locations: classpath*:com/t4cloud/t/**/*Mapper.xml
+  check-config-location: true
+  global-config:
+    # 关闭MP3.0自带的banner
+    banner: false
+    db-config:
+      #主键类型  0:"数据库ID自增",1:"该类型为未设置主键类型", 2:"用户输入ID",3:"全局唯一ID (数字类型唯一ID)", 4:"全局唯一ID UUID",5:"字符串全局唯一ID (idWorker 的字符串表示)";
+      id-type: ASSIGN_UUID
+      # 默认数据库表下划线命名
+      table-underline: true
+      logic-delete-field: flag  #全局逻辑删除字段值 3.3.0开始支持，详情看下面。
+      logic-delete-value: 0 # 逻辑已删除值(默认为 1)
+      logic-not-delete-value: 1 # 逻辑未删除值(默认为 0)
+
+# 日志
+logging:
+  level:
+    com.t4cloud.t.user.mapper: debug
+    com.t4cloud.t.feign.client: debug
+    com.t4cloud.t: debug
+  file:
+    name: /TeaR-APP/logs/T4Cloud/T4Cloud-User.log
+
+# rocket mq 配置
+#rocketmq:
+#  #  name-server: 127.0.0.1:9876
+#  name-server: 127.0.0.1:9876
+#  producer:
+#    # 必须指定group
+#    group: T4Cloud
+
+# Ribbon规则配置 负载均衡器采用的是随机，（默认配置为RandomRule，如果需要变更可以开放此处配置）
+#T4Cloud-Support:
+#  ribbon:
+#    NFloadBalanceRuleClassName: com.netflix.loadbalancer.RandomRule
+
+ribbon:
+  # 配置超时时间
+  ReadTimeout: 300000
+  ConnectTimeout: 300000
+  # 开启饥饿加载
+  eager-load:
+    enabled: true
+    clients: T4Cloud-Support,T4Cloud-System
+
+# feign配置
+feign:
+  client:
+    config:
+      default:
+        loggerLevel: FULL
+        requestInterceptors:
+          - com.t4cloud.t.base.authc.TokenFeignIntecepor
+  # 使用httpclient提升性能
+  httpclient:
+    enabled: true
+    max-connections: 200
+    max-connections-per-route: 40
+
+# Swagger文档配置
+swagger:
+  production: false
+  basic:
+    enable: true
+    username: t4cloud
+    password: 123456
+
+#T4CLOUD自定义配置
+t4cloud:
+  #登录接口是否强制验证图片验证码
+  check-code: true
+  #是否进行请求有效性，
+  valid-request: true
+  #需要放过的接口，用逗号分隔
+  #  valid-filter: /login/captcha,/login/test
+  #系统日志的处理方式，0：直接入库，1：通过MQ交由SYS模块集中处理
+  log-type: 0
+  actuator:
+    ## 是否开启运行资源监控
+    open: true
+  # 分布式任务调度器配置
+  job:
+    ## 是否启用定时任务
+    open: false
+    ## XXL admin的运行地址
+    address: http://127.0.0.1:18020
+    ## 端口自动配置成本项目的端口-100
+    port: ${server.port}
+    appname: ${spring.application.name}
+  # poi 配置
+  excel:
+    # 导出数据的阈值，如果大于这个值，则采用大数据模式导出
+    big-data: 1000
+    # 每次导入excel的页大小
+    page-size: 1000
+    ## 导出的时候OSS的前缀（任何资源管理器的END POINT）
+    oss: http://t4cloud.com:18010/T4Cloud-Support/file/view/
+  # RSA 公私钥配置（公钥一般来说是给前端或者客户端使用的，不会再服务端使用到）
+  private-key: MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBAOpmm6AwtPN3LQXriHlXXy5TIm1z7DeBm51j5Q22L9IyuQk5B5Dbqe0CY4Ew1dh8+TUCrz0qzb+GIXXKGQHuodvTNZZT5ZHjhDnaIajOzmM8s767t/wm9MwLhVPgHHrwi7dyU5YCCrD3rzAYmk4Dtx9jnGRkx+61R9ESvBXwpsXTAgMBAAECgYAW0ojCjxt/PRJQKj+ueNhWnVeTyp6sRN1O9MP/ksaTM8caY8gdzZV88yeXE5curfRhufIwBXPk+v1VB6lpq79shS7axqun/nL+MbSOFL4pDH2yCWNyuWKoT64S4sCDojaYMXvzXUzd1TYvDM03jFfAGZYLzd3YMogdTruIuQUBMQJBAPcBVwn6N24htm+UT5H8cs8XU3F2Wby9IokrO4E1mYYPbXbzdMQDQGirRaqqCa47WkXdHXYDeIfCm2JoYvDd70sCQQDy78P7TwXNkS+o3f8ePVir7R4Y+H4nZ2A8+HZ0/dAs+UinpCNHP0e22leDjVG2FAtZ64NGe1yv5RnP6DOt1QaZAkA56OmEIFLAkkzYahghrOMp5Fke39V4J4uiRy2DRJLC2Hkci0WT8wM1xvnlYko0vBuVB5sxoOywP5L4hmqz+ARzAkEAp+FLFNr6DqHbRp4K0/He2gileOoX+9Dzb47gBV70wm+OZtMF0hGH1HO0cGNzaRkW8w/OiyFq3t66ZLN5KxKAWQJBALCOqYa4tSCrKV+LH7sSh5yy/xjD/NCSpAqbHrGllxT41xqUx9G511VNhfroq8FQL+Llq+fgCPN8OIwCRrg4qKk=
+  public-key: MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDqZpugMLTzdy0F64h5V18uUyJtc+w3gZudY+UNti/SMrkJOQeQ26ntAmOBMNXYfPk1Aq89Ks2/hiF1yhkB7qHb0zWWU+WR44Q52iGozs5jPLO+u7f8JvTMC4VT4Bx68Iu3clOWAgqw968wGJpOA7cfY5xkZMfutUfRErwV8KbF0wIDAQAB
+  # 开启租户模式
+  tenant: true
+  tenant-key: T4Cloud
+  filter-table: example_common
+  ## 下载、预览、导出的服务器缓存目录
+  temp-dir: /tmp/t4cloud
+  ## 缓存文件保留时长，单位（天），-1代表不启动任务
+  temp-clean: 7
+  # socket 配置
+  socket:
+    open: false
+    host: 0.0.0.0
+    ## 端口自动配置成本项目的端口-200
+    port: ${server.port}
+  mqtt:
+    open: false
+    client-id: client
+    host: tcp://127.0.0.1:61613
+    user: admin
+    password: password
+  redis-topic:
+    open: false

@@ -1,0 +1,117 @@
+<template>
+  <div>
+      <!-- 搜索，可在下方开启 -->
+      <t-table-search :search-col="tableColumn" :query-param="queryParam" @search="search"></t-table-search>
+     <!-- 操作按钮，可直接在标签中定义新按钮 -->
+      <t-table-operator :selectedRows="selectionRows" :add="hasAuth(['$!{cfg.moduleName}:$!{entity}:ADD'])" @onAdd="handleAdd" :delete="hasAuth(['$!{cfg.moduleName}:$!{entity}:DELETE'])" @onDelete="handleDelete"></t-table-operator>
+      <!-- 表格区域 -->
+      <t-standard-table
+      #if($!{cfg.tree})
+         :tableType="3"
+         :treeProps="treeProps"
+         @load="lazyLoadTree"
+      #end
+         :selectedRows="selectionRows"
+         :tableData="tableData"
+         :tableColumn="tableColumn"
+         :ipagination="ipagination"
+         :url="url"
+      #if(!$!{cfg.tree})
+         :sorter="sorter"
+      #end
+         :loading="loading"
+         :import="hasAuth(['$!{cfg.moduleName}:$!{entity}:IMPORT'])"
+         :export="hasAuth(['$!{cfg.moduleName}:$!{entity}:EXPORT'])"
+         @onSortChange="handleSortChange"
+         @pageSizeChange="handPageSizeChange"
+         @onSelectRowChange="handSelectRowChange"
+         @onTableHeadCommand="handlerTableHeadCommand"
+      >
+          <!-- 操作按钮 -->
+          <template #options="{row}" >
+            <el-button type="primary" size="mini" @click="handleEdit(row)" v-auth="['$!{cfg.moduleName}:$!{entity}:ADD','$!{cfg.moduleName}:$!{entity}:EDIT']">编辑</el-button>
+            <el-dropdown>
+              <span class="el-dropdown-link">
+                更多<i class="el-icon-arrow-down"></i>
+              </span>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item @click.native="handleDetail(row)" >详情</el-dropdown-item>
+#if($!{cfg.tree})
+                <el-dropdown-item @click.native="handleAddSub(row)" v-auth="'$!{cfg.moduleName}:$!{entity}:ADD'">添加子项</el-dropdown-item>
+#end
+                <el-dropdown-item @click.native="handleDelete([row.id])" v-auth="'$!{cfg.moduleName}:$!{entity}:DELETE'">删除</el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
+          </template>
+
+#foreach($field in $!{table.fields})
+    #if($!{field.type.contains("text")})
+          <!-- #if($!{field.comment} != '')$!{field.comment}#else $field.propertyName #end  -->
+          <template #$field.propertyName="{row}" >
+              <t-tool-tip :text="row.$field.propertyName"></t-tool-tip>
+          </template>
+    #end
+#end
+      </t-standard-table>
+      <!-- 编辑modal -->
+      <$!{entity}Modal ref="entityModal" @success="loadData" #if($!{cfg.tree}):tableData="tableData"#end></$!{entity}Modal>
+  </div>
+</template>
+<script>
+import { T4CloudListMixin } from '../../mixins/T4CloudListMixin'
+import $!{entity}Modal from './modals/$!{entity}Modal'
+
+export default {
+  name:'$!{entity}List',
+  mixins: [T4CloudListMixin],
+  components: {
+    $!{entity}Modal
+  },
+  data() {
+    return {
+      tableColumn: [
+#foreach($field in $!{table.fields})
+        {
+          key: '$field.propertyName',
+          name: '#if($!{field.comment} != '')$!{field.comment}#else $field.propertyName #end',
+#if(!$!{field.type.contains("text")})
+    #if(!$!{cfg.tree})
+          query: true,
+    #end
+    #if($!{field.propertyType.equalsIgnoreCase("int")} || $!{field.propertyType.equalsIgnoreCase("Integer")} || $!{field.propertyType.equalsIgnoreCase("double")} || $!{field.propertyType.equalsIgnoreCase("float")} || $!{field.propertyType.equalsIgnoreCase("BigDecimal")})
+          type: 'Number',
+    #elseif($!{field.type.equalsIgnoreCase("date")})
+          type: 'Date',
+    #elseif($!{field.type.equalsIgnoreCase("time")})
+          type: 'Time',
+    #elseif($!{field.type.equalsIgnoreCase("datetime")})
+          type: 'DateTime',
+    #end
+#else
+          render: '$field.propertyName'
+#end
+        },
+#end
+      ],
+      url: {
+#if($!{cfg.tree})
+        tree: '/$!{cfg.serverName}#if($!{package.ModuleName} && !$!{cfg.cloud})/$!{package.ModuleName}#end/$!{entity}/tree',
+#else
+        page: '/$!{cfg.serverName}#if($!{package.ModuleName} && !$!{cfg.cloud})/$!{package.ModuleName}#end/$!{entity}/page',
+#end
+        delete: '/$!{cfg.serverName}#if($!{package.ModuleName} && !$!{cfg.cloud})/$!{package.ModuleName}#end/$!{entity}/delete',
+        export: '/$!{cfg.serverName}#if($!{package.ModuleName} && !$!{cfg.cloud})/$!{package.ModuleName}#end/$!{entity}/export',
+        importXls: '/$!{cfg.serverName}#if($!{package.ModuleName} && !$!{cfg.cloud})/$!{package.ModuleName}#end/$!{entity}/import',
+      }
+    }
+  },
+#if($!{cfg.tree})
+  created() {
+     this.ipagination.show = false
+     this.ipagination.treeLazyInit = 2
+     this.ipagination.treeLazyDepth = 1
+  },
+#end
+  methods: {}
+}
+</script>
